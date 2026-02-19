@@ -2,6 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 import { chromium } from "playwright";
 import { LMStudioClient } from "@lmstudio/sdk";
 
+// Función para generar descripción con LM Studio
+async function generateDescription(
+  llmModel: any,
+  year: string,
+  make: string,
+  model: string,
+  productInfo: any[],
+  pageContent: { description?: string; title?: string },
+  isFallback: boolean = false
+) {
+  const basePrompt = `Genera una descripción detallada en español para pistones Pro-X para una motocicleta ${make} ${model} del año ${year}.
+
+La descripción debe incluir:
+1. Características principales de los pistones Pro-X
+2. Compatibilidad con el modelo específico
+3. Ventajas de usar pistones Pro-X
+4. Recomendaciones de instalación generales`;
+
+  const enhancedPrompt = isFallback
+    ? `${basePrompt}
+
+Nota: Esta es una descripción genérica ya que no se pudo obtener información específica del producto.`
+    : `${basePrompt}
+
+Información de la página: ${pageContent.description || pageContent.title || 'No disponible'}
+
+Productos encontrados: ${JSON.stringify(productInfo)}`;
+
+  console.log(isFallback ? "Generando descripción fallback..." : "Generando descripción con LM Studio...");
+  const result = await llmModel.respond(enhancedPrompt);
+  return result.content;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { year, make, model } = await request.json();
@@ -72,25 +105,17 @@ export async function POST(request: NextRequest) {
       const client = new LMStudioClient();
       const llmModel = await client.llm.model("oh-dcft-v3.1-claude-3-5-sonnet-20241022");
 
-      const prompt = `
-      Genera una descripción detallada en español para los siguientes productos de pistones Pro-X para una motocicleta ${make} ${model} del año ${year}.
-      
-      Información de la página: ${pageContent.description || pageContent.title || 'No disponible'}
-      
-      Productos encontrados: ${JSON.stringify(productInfo)}
-      
-      La descripción debe incluir:
-      1. Características principales de los pistones Pro-X
-      2. Compatibilidad con el modelo específico ${make} ${model} del año ${year}
-      3. Ventajas de usar pistones Pro-X
-      4. Recomendaciones de instalación (si aplica)
-      `;
-
-      console.log("Generando descripción con LM Studio...");
-      const result = await llmModel.respond(prompt);
+      const description = await generateDescription(
+        llmModel,
+        year,
+        make,
+        model,
+        productInfo,
+        { description: pageContent.description, title: pageContent.title }
+      );
 
       return NextResponse.json({ 
-        description: result.content,
+        description,
         products: productInfo,
         pageInfo: pageContent,
         url: url,
@@ -105,23 +130,18 @@ export async function POST(request: NextRequest) {
       const client = new LMStudioClient();
       const llmModel = await client.llm.model("oh-dcft-v3.1-claude-3-5-sonnet-20241022");
 
-      const fallbackPrompt = `
-      Genera una descripción detallada en español para pistones Pro-X para una motocicleta ${make} ${model} del año ${year}.
-      
-      La descripción debe incluir:
-      1. Características principales de los pistones Pro-X
-      2. Compatibilidad con el modelo específico
-      3. Ventajas de usar pistones Pro-X
-      4. Recomendaciones de instalación generales
-      
-      Nota: Esta es una descripción genérica ya que no se pudo obtener información específica del producto.
-      `;
-
-      console.log("Generando descripción fallback con LM Studio...");
-      const result = await llmModel.respond(fallbackPrompt);
+      const description = await generateDescription(
+        llmModel,
+        year,
+        make,
+        model,
+        [],
+        {},
+        true
+      );
 
       return NextResponse.json({ 
-        description: result.content,
+        description,
         scrapingError: true,
         errorDetails: scrapingError instanceof Error ? scrapingError.message : String(scrapingError),
         url: url
