@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { LMStudioClient } from "@lmstudio/sdk";
 
 interface Product {
   title: string;
@@ -14,6 +13,16 @@ interface PageInfo {
   breadcrumbs: string;
   title: string;
   htmlLength: number;
+}
+
+interface ScrapeResponse {
+  description?: string;
+  products?: Product[];
+  pageInfo?: PageInfo;
+  url?: string;
+  scrapingError?: boolean;
+  errorDetails?: string;
+  error?: string;
 }
 
 export default function Home() {
@@ -45,26 +54,16 @@ export default function Home() {
         body: JSON.stringify({ year, make, model }),
       });
 
-      const data = await response.json();
+      const data: ScrapeResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || "Error al realizar el scraping");
       }
 
-      setDescription(data.description);
-      
-      // Guardar los resultados del scraping
-      if (data.products) {
-        setProducts(data.products);
-      }
-      
-      if (data.pageInfo) {
-        setPageInfo(data.pageInfo);
-      }
-      
-      if (data.url) {
-        setUrl(data.url);
-      }
+      setDescription(data.description ?? "");
+      setProducts(data.products ?? []);
+      setPageInfo(data.pageInfo ?? null);
+      setUrl(data.url ?? "");
       
       if (data.scrapingError) {
         setError(`Error durante el scraping: ${data.errorDetails || 'Detalles no disponibles'}`);

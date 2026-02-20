@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { chromium } from "playwright";
 import { LMStudioClient } from "@lmstudio/sdk";
 
+// Constantes de configuración
+const LM_STUDIO_MODEL = "oh-dcft-v3.1-claude-3-5-sonnet-20241022";
+const SCRAPING_TIMEOUT = 30000;
+
 /**
  * Genera una descripción de producto usando LM Studio
  * @param llmModel - Modelo de LM Studio a utilizar
@@ -45,6 +49,14 @@ Productos encontrados: ${JSON.stringify(productInfo)}`;
   return result.content;
 }
 
+/**
+ * Obtiene el modelo LLM de LM Studio
+ */
+async function getLLMModel() {
+  const client = new LMStudioClient();
+  return client.llm.model(LM_STUDIO_MODEL);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { year, make, model } = await request.json();
@@ -60,7 +72,7 @@ export async function POST(request: NextRequest) {
     const page = await context.newPage();
 
     try {
-      await page.goto(url, { timeout: 30000 });
+      await page.goto(url, { timeout: SCRAPING_TIMEOUT });
       console.log("Página cargada correctamente");
 
       // Esperar a que cargue el contenido
@@ -112,8 +124,7 @@ export async function POST(request: NextRequest) {
       await browser.close();
 
       // Generar descripción con LM Studio
-      const client = new LMStudioClient();
-      const llmModel = await client.llm.model("oh-dcft-v3.1-claude-3-5-sonnet-20241022");
+      const llmModel = await getLLMModel();
 
       const description = await generateDescription(
         llmModel,
@@ -137,8 +148,7 @@ export async function POST(request: NextRequest) {
       await browser.close();
       
       // Si falla el scraping, generamos una descripción genérica
-      const client = new LMStudioClient();
-      const llmModel = await client.llm.model("oh-dcft-v3.1-claude-3-5-sonnet-20241022");
+      const llmModel = await getLLMModel();
 
       const description = await generateDescription(
         llmModel,
