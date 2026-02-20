@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { chromium } from "playwright";
 import { LMStudioClient } from "@lmstudio/sdk";
 
-// Función para generar descripción con LM Studio
+/**
+ * Genera una descripción de producto usando LM Studio
+ * @param llmModel - Modelo de LM Studio a utilizar
+ * @param year - Año de la motocicleta
+ * @param make - Marca de la motocicleta
+ * @param model - Modelo de la motocicleta
+ * @param productInfo - Información de productos encontrados
+ * @param pageContent - Contenido de la página web
+ * @param isFallback - Si es true, genera descripción genérica
+ * @returns Descripción generada en español
+ */
 async function generateDescription(
   llmModel: any,
   year: string,
