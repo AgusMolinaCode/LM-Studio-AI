@@ -7,6 +7,16 @@ const LM_STUDIO_MODEL = "oh-dcft-v3.1-claude-3-5-sonnet-20241022";
 const SCRAPING_TIMEOUT = 30000;
 
 /**
+ * Helper para crear respuestas de error consistentes
+ */
+function createErrorResponse(message: string, details?: string, status: number = 500) {
+  return NextResponse.json(
+    { error: message, details },
+    { status }
+  );
+}
+
+/**
  * Genera una descripción de producto usando LM Studio
  * @param llmModel - Modelo de LM Studio a utilizar
  * @param year - Año de la motocicleta
@@ -169,12 +179,9 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error general:', error);
-    return NextResponse.json(
-      { 
-        error: 'Error al realizar el scraping', 
-        details: error instanceof Error ? error.message : String(error) 
-      },
-      { status: 500 }
+    return createErrorResponse(
+      'Error al realizar el scraping',
+      error instanceof Error ? error.message : String(error)
     );
   }
 }
