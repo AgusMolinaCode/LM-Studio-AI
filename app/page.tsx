@@ -25,25 +25,45 @@ interface ScrapeResponse {
   error?: string;
 }
 
+interface FormState {
+  year: string;
+  make: string;
+  model: string;
+}
+
+interface ResultState {
+  description: string;
+  products: Product[];
+  pageInfo: PageInfo | null;
+  url: string;
+  error: string;
+}
+
 export default function Home() {
-  const [year, setYear] = useState<string>("2022");
-  const [make, setMake] = useState<string>("honda");
-  const [model, setModel] = useState<string>("crf-250-r");
+  const [formState, setFormState] = useState<FormState>({
+    year: "2022",
+    make: "honda",
+    model: "crf-250-r",
+  });
   const [loading, setLoading] = useState<boolean>(false);
-  const [description, setDescription] = useState<string>("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
-  const [url, setUrl] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [result, setResult] = useState<ResultState>({
+    description: "",
+    products: [],
+    pageInfo: null,
+    url: "",
+    error: "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setDescription("");
-    setProducts([]);
-    setPageInfo(null);
-    setUrl("");
-    setError("");
+    setResult({
+      description: "",
+      products: [],
+      pageInfo: null,
+      url: "",
+      error: "",
+    });
 
     try {
       const response = await fetch("/api/scrape", {
@@ -51,7 +71,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ year, make, model }),
+        body: JSON.stringify(formState),
       });
 
       const data: ScrapeResponse = await response.json();
@@ -60,17 +80,19 @@ export default function Home() {
         throw new Error(data.error || "Error al realizar el scraping");
       }
 
-      setDescription(data.description ?? "");
-      setProducts(data.products ?? []);
-      setPageInfo(data.pageInfo ?? null);
-      setUrl(data.url ?? "");
-      
-      if (data.scrapingError) {
-        setError(`Error durante el scraping: ${data.errorDetails || 'Detalles no disponibles'}`);
-      }
+      setResult({
+        description: data.description ?? "",
+        products: data.products ?? [],
+        pageInfo: data.pageInfo ?? null,
+        url: data.url ?? "",
+        error: data.scrapingError ? `Error durante el scraping: ${data.errorDetails || 'Detalles no disponibles'}` : "",
+      });
     } catch (error) {
       console.error("Error:", error);
-      setError(error instanceof Error ? error.message : String(error));
+      setResult(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : String(error),
+      }));
     } finally {
       setLoading(false);
     }
@@ -89,8 +111,8 @@ export default function Home() {
             <input
               type="text"
               id="year"
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
+              value={formState.year}
+              onChange={(e) => setFormState(prev => ({ ...prev, year: e.target.value }))}
               className="w-full p-2 border rounded"
               placeholder="Ej: 2022"
               required
@@ -104,8 +126,8 @@ export default function Home() {
             <input
               type="text"
               id="make"
-              value={make}
-              onChange={(e) => setMake(e.target.value)}
+              value={formState.make}
+              onChange={(e) => setFormState(prev => ({ ...prev, make: e.target.value }))}
               className="w-full p-2 border rounded"
               placeholder="Ej: honda"
               required
@@ -119,8 +141,8 @@ export default function Home() {
             <input
               type="text"
               id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
+              value={formState.model}
+              onChange={(e) => setFormState(prev => ({ ...prev, model: e.target.value }))}
               className="w-full p-2 border rounded"
               placeholder="Ej: crf-250-r"
               required
@@ -137,17 +159,17 @@ export default function Home() {
         </button>
       </form>
       
-      {error && (
+      {result.error && (
         <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded mb-4">
           <h2 className="font-semibold">Error:</h2>
-          <p>{error}</p>
+          <p>{result.error}</p>
         </div>
       )}
       
-      {url && (
+      {result.url && (
         <div className="mb-4">
           <a 
-            href={url} 
+            href={result.url} 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-blue-600 hover:underline"
@@ -157,18 +179,18 @@ export default function Home() {
         </div>
       )}
       
-      {description && (
+      {result.description && (
         <div className="bg-gray-800 text-white p-4 rounded mb-6">
           <h2 className="text-xl font-semibold mb-2">Descripción:</h2>
-          <div className="whitespace-pre-wrap">{description}</div>
+          <div className="whitespace-pre-wrap">{result.description}</div>
         </div>
       )}
       
-      {products.length > 0 && (
+      {result.products.length > 0 && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Productos encontrados:</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map((product, index) => (
+            {result.products.map((product, index) => (
               <div key={index} className="border rounded p-4">
                 {product.imageUrl && (
                   <img 
@@ -185,15 +207,15 @@ export default function Home() {
         </div>
       )}
       
-      {pageInfo && (
+      {result.pageInfo && (
         <div className="bg-gray-100 p-4 rounded">
           <h2 className="text-lg font-semibold mb-2">Información de la página:</h2>
-          {pageInfo.title && <p><strong>Título:</strong> {pageInfo.title}</p>}
-          {pageInfo.breadcrumbs && <p><strong>Ruta:</strong> {pageInfo.breadcrumbs}</p>}
-          {pageInfo.description && (
+          {result.pageInfo.title && <p><strong>Título:</strong> {result.pageInfo.title}</p>}
+          {result.pageInfo.breadcrumbs && <p><strong>Ruta:</strong> {result.pageInfo.breadcrumbs}</p>}
+          {result.pageInfo.description && (
             <div>
               <p><strong>Descripción original:</strong></p>
-              <p className="italic">{pageInfo.description}</p>
+              <p className="italic">{result.pageInfo.description}</p>
             </div>
           )}
         </div>
