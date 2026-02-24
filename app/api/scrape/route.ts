@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chromium } from "playwright";
-import { LMStudioClient } from "@lmstudio/sdk";
+import { LMStudioClient, LLMDynamicHandle } from "@lmstudio/sdk";
 
 // Constantes de configuración
 const LM_STUDIO_MODEL = "oh-dcft-v3.1-claude-3-5-sonnet-20241022";
 const SCRAPING_TIMEOUT = 30000;
+
+// Tipos para productos y contenido de página
+interface ScrapedProduct {
+  title: string;
+  price: string;
+  imageUrl: string;
+}
+
+interface PageContent {
+  description: string;
+  breadcrumbs: string;
+  title: string;
+  htmlLength: number;
+}
 
 /**
  * Helper para crear respuestas de error consistentes
@@ -28,11 +42,11 @@ function createErrorResponse(message: string, details?: string, status: number =
  * @returns Descripción generada en español
  */
 async function generateDescription(
-  llmModel: any,
+  llmModel: LLMDynamicHandle,
   year: string,
   make: string,
   model: string,
-  productInfo: any[],
+  productInfo: ScrapedProduct[],
   pageContent: { description?: string; title?: string },
   isFallback: boolean = false
 ) {
@@ -92,7 +106,7 @@ export async function POST(request: NextRequest) {
       // await page.screenshot({ path: 'screenshot.png' });
 
       // Extraer información de los productos
-      const productInfo = await page.evaluate(() => {
+      const productInfo: ScrapedProduct[] = await page.evaluate(() => {
         const products = Array.from(document.querySelectorAll('.product'));
         if (products.length === 0) {
           // Intentar con otros selectores si no encuentra productos
@@ -116,7 +130,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Extraer información adicional de la página
-      const pageContent = await page.evaluate(() => {
+      const pageContent: PageContent = await page.evaluate(() => {
         const description = document.querySelector('.term-description')?.textContent?.trim() || '';
         const breadcrumbs = document.querySelector('.woocommerce-breadcrumb')?.textContent?.trim() || '';
         const title = document.querySelector('h1.page-title')?.textContent?.trim() || '';
