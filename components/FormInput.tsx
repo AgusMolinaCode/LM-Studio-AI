@@ -1,15 +1,18 @@
 "use client";
 
-import React from "react";
+import React, { InputHTMLAttributes } from "react";
 
-interface FormInputProps {
+// Tipos de input HTML5 válidos para formularios
+type InputType = "text" | "email" | "password" | "number" | "tel" | "url" | "search";
+
+interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "type"> {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   required?: boolean;
-  type?: string;
+  type?: InputType;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -20,6 +23,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   placeholder,
   required = true,
   type = "text",
+  className = "",
+  ...rest
 }) => {
   return (
     <div>
@@ -29,11 +34,13 @@ export const FormInput: React.FC<FormInputProps> = ({
       <input
         type={type}
         id={id}
+        name={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full p-2 border rounded"
+        className={`w-full p-2 border rounded ${className}`}
         placeholder={placeholder}
         required={required}
+        {...rest}
       />
     </div>
   );
